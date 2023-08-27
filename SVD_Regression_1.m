@@ -1,28 +1,45 @@
-clear;
-MD = 128; %<-- number of cases .;
-MX = 256; %<-- number of ctrls. ;
-N = 3; %<-- ambient dimension. ;
+% Initialize Parameters
+MD = 128;  % Number of cases
+MX = 256;  % Number of controls
+N = 3;    % Dimension
 abs_shift = 0.05;
-mean_shift = abs_shift * randn(1,N)/2; 
-D = makelr_0(MD,N,2,0.25) + repmat(mean_shift,MD,1);
-Dn = D; Dt = transpose(D); eDn = ones(MD,1); eDt = ones(1,MD);
-X = makelr_0(MX,N,2,0.25) - repmat(mean_shift,MX,1);
-Xn = X; Xt = transpose(X); eXn = ones(MX,1); eXt = ones(1,MX);
-A = ((1/MD)*Dt*eDn-(1/MX)*Xt*eXn)*((1/MD)*eDt*Dn-(1/MX)*eXt*Xn);
-B = (1/MD)*Dt*(Dn - (1/MX)*eDn*(eXt*Xn)) + (1/MX)*Xt*(Xn - (1/MD)*eXn*(eDt*Dn));
-C = (1/MD)*Dt*Dn - (1/MX)*Xt*Xn;
-[UA,L] = eigs(A,1,'LM');
-[UB,L] = eigs(B,1,'LM');
-[UC,L] = eigs(C,1,'LM');
-pDA = D*UA; pXA = X*UA; 
-pDB = D*UB; pXB = X*UB; 
-pDC = D*UC; pXC = X*UC; 
+mean_shift = abs_shift * randn(1,N)/2;  % Create random shift
+
+% Generate Data for Cases and Controls
+D = makelr_0(MD,N,2,0.25) + repmat(mean_shift,MD,1);  % Data for cases
+X = makelr_0(MX,N,2,0.25) - repmat(mean_shift,MX,1);  % Data for controls
+
+% Prepare Matrices for Computations
+% Computing transpose and ones vectors to use in matrix operations
+Dt = transpose(D); eDn = ones(MD,1); eDt = ones(1,MD);
+Xt = transpose(X); eXn = ones(MX,1); eXt = ones(1,MX);
+
+% Compute A, B, C Matrices
+A = ((1/MD)*Dt*eDn-(1/MX)*Xt*eXn)*((1/MD)*eDt*D-(1/MX)*eXt*X);
+B = (1/MD)*Dt*(D - (1/MX)*eDn*(eXt*X)) + (1/MX)*Xt*(X - (1/MD)*eXn*(eDt*D));
+C = (1/MD)*Dt*D - (1/MX)*Xt*X;
+
+% Compute Eigenvectors
+[UA,~] = eigs(A,1,'LM');
+[UB,~] = eigs(B,1,'LM');
+[UC,~] = eigs(C,1,'LM');
+
+% Project Data
+pDA = D*UA; pXA = X*UA;
+pDB = D*UB; pXB = X*UB;
+pDC = D*UC; pXC = X*UC;
+
+% Compute Histograms
 h_avg = mean([pDA;pDB;pXA;pXB]);
 h_std = std([pDA;pDB;pXA;pXB]);
 nbins = 32; hbins = linspace(h_avg-4*h_std,h_avg+4*h_std,nbins); hbins_c = linspace(0,h_avg+4*h_std,nbins/2);
+
+% Histograms for different projections
 hDA = hist(pDA,hbins)/MD; hXA = hist(pXA,hbins)/MX;
 hDB = hist(pDB,hbins)/MD; hXB = hist(pXB,hbins)/MX;
 hDC = hist(abs(pDC),hbins_c)/MD; hXC = hist(abs(pXC),hbins_c)/MX;
+
+% Plotting
 figure;clf;
 markersize_use = 8;
 subplot(1,2,1);hold on;
