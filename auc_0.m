@@ -80,3 +80,54 @@ borders = outerpos - position;
 edge = -borders(1)/2;
 pos1 = [edge - 1800,  scnsize(4) * (2/3) - 500,  scnsize(3) - edge + 300,  scnsize(4) + 300];
 set(fig1,'OuterPosition',pos1);
+
+
+function [auc] = calc_auc(v_ctrl, v_case)
+    % Calculates the area under the curve (AUC) of the ROC curve.
+    % Inputs:
+    %   v_ctrl: Array of control data
+    %   v_case: Array of case data
+    % Output:
+    %   auc: AUC value (between 0 and 1)
+    
+    if nargin < 2
+        % Generate some test data if no arguments are provided
+        n = 12340;
+        disp('Generating test data...');
+        b = 0.05;
+        K = 64;
+        v_ctrl = round(K * max(0, min(1, randn(n-3,1)/10 + 0.5 - b)));
+        v_case = round(K * max(0, min(1, randn(n+2,1)/10 + 0.5 + b)));
+    end
+
+    if isempty(v_ctrl) || isempty(v_case)
+        auc = 0.5;
+        return;
+    end
+
+    % Compute AUC
+    v_ctrl = reshape(v_ctrl, 1, []);
+    v_case = reshape(v_case, 1, []);
+    sorted_data = sort_and_label(v_ctrl, v_case);
+    auc = calculate_auc(sorted_data, length(v_ctrl), length(v_case));
+end
+function [sorted_data] = sort_and_label(v_ctrl, v_case)
+    % Sorts and labels the concatenated control and case data.
+    % v_ctrl and v_case are row vectors.
+    
+    labels = [zeros(1, length(v_ctrl)), ones(1, length(v_case))];
+    values = [v_ctrl, v_case];
+    [sorted_values, sorted_indices] = sort(values, 'ascend');
+    sorted_labels = labels(sorted_indices);
+    sorted_data = [sorted_values; sorted_labels];
+end
+function [auc] = calculate_auc(sorted_data, n_ctrl, n_case)
+    % Calculates AUC based on sorted and labeled data
+    values = sorted_data(1,:);
+    labels = sorted_data(2,:);
+    cumulated_sum = cumsum(labels(end:-1:1));
+    cumulated_sum = [cumulated_sum(end:-1:1), 0];
+    
+    idx_ctrl = (labels == 0);
+    auc = sum(cumulated_sum(idx_ctrl)) / (2 * n_ctrl * n_case);
+end
